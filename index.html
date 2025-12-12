@@ -1,293 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script>
-      (function() {
-        const originalConsole = window.console;
-        window.console = {
-          log: (...args) => {
-            originalConsole.log(...args);
-            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
-          },
-          error: (...args) => {
-            originalConsole.error(...args);
-            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
-          },
-          warn: (...args) => {
-            originalConsole.warn(...args);
-            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
-          }
-        };
-
-        let requestId = 0;
-        let callbacksMap = new Map();
-        let streamControllers = new Map();
-        
-        window.claude = {
-          complete: (prompt) => {
-            return new Promise((resolve, reject) => {
-              const id = requestId++;
-              callbacksMap.set(id, { resolve, reject });
-              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
-            });
-          }
-        };
-
-        window.storage = {
-          get: (key, shared = false) => {
-            return new Promise((resolve, reject) => {
-              const id = requestId++;
-              callbacksMap.set(id, { resolve, reject });
-              window.parent.postMessage({ type: 'storageGet', id, key, shared }, '*');
-            });
-          },
-          set: (key, value, shared = false) => {
-            return new Promise((resolve, reject) => {
-              const id = requestId++;
-              callbacksMap.set(id, { resolve, reject });
-              window.parent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
-            });
-          },
-          delete: (key, shared = false) => {
-            return new Promise((resolve, reject) => {
-              const id = requestId++;
-              callbacksMap.set(id, { resolve, reject });
-              window.parent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
-            });
-          },
-          list: (prefix, shared = false) => {
-            return new Promise((resolve, reject) => {
-              const id = requestId++;
-              callbacksMap.set(id, { resolve, reject });
-              window.parent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
-            });
-          }
-        };
-
-        let pendingBlobs = new Map();
-        URL.createObjectURL = (blob) => {
-          // Store the blob and create an ID and URL for it
-          const blobId = `blob-${Date.now()}-${Math.random()}`;
-          pendingBlobs.set(blobId, blob);
-          return `blob-request://${blobId}`;
-        };
-
-        URL.revokeObjectURL = (url) => {
-          // Remove the blob from our store
-          const blobId = url.replace("blob-request://", "");
-          pendingBlobs.delete(blobId);
-        };
-
-        const getBlobFromURL = (url) => {
-          const blobId = url.replace("blob-request://", "");
-          return pendingBlobs.get(blobId);
-        };
-
-        // Override global fetch with streaming support
-        window.fetch = (url, init = {}) => {
-          return new Promise((resolve, reject) => {
-            const id = requestId++;
-            const channelId = `fetch-${id}-${Date.now()}`;
-            
-            callbacksMap.set(id, { 
-              resolve: (response) => {
-                // Create a ReadableStream for the response body
-                const stream = new ReadableStream({
-                  start(controller) {
-                    streamControllers.set(channelId, controller);
-                  },
-                  cancel() {
-                    streamControllers.delete(channelId);
-                  }
-                });
-                
-                // Create and return the Response with the stream
-                resolve(new Response(stream, {
-                  status: response.status,
-                  statusText: response.statusText,
-                  headers: response.headers
-                }));
-              },
-              reject,
-              channelId
-            });
-            
-            window.parent.postMessage({
-              type: 'proxyFetch',
-              id,
-              url,
-              init,
-              channelId
-            }, '*');
-          });
-        };
-
-        window.addEventListener('message', async (event) => {
-          if (event.data.type === 'takeScreenshot') {
-            const rootElement = document.getElementById('artifacts-component-root-html');
-            if (!rootElement) {
-              window.parent.postMessage({
-                type: 'screenshotError',
-                error: new Error('Root element not found'),
-              }, '*');
-            }
-            const screenshot = await htmlToImage.toPng(rootElement, {
-              imagePlaceholder:
-                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
-            });
-            window.parent.postMessage({
-              type: 'screenshotData',
-              data: screenshot,
-            }, '*');
-          } else if (event.data.type === 'claudeComplete') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-            } else {
-              callback.resolve(event.data.completion);
-            }
-            callbacksMap.delete(event.data.id);
-          } else if (event.data.type === 'proxyFetchResponse') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-              callbacksMap.delete(event.data.id);
-            } else {
-              // Initial response with headers, status, etc.
-              callback.resolve({
-                status: event.data.status,
-                statusText: event.data.statusText,
-                headers: event.data.headers
-              });
-              // Don't delete the callback yet if streaming
-              if (!event.data.body) {
-                callbacksMap.delete(event.data.id);
-              }
-            }
-          } else if (event.data.type === 'proxyFetchStream') {
-            // Handle streaming data chunks
-            const controller = streamControllers.get(event.data.channelId);
-            if (controller) {
-              if (event.data.error) {
-                controller.error(new Error(event.data.error));
-                streamControllers.delete(event.data.channelId);
-              } else if (event.data.done) {
-                controller.close();
-                streamControllers.delete(event.data.channelId);
-                // Clean up the callback
-                const callback = Array.from(callbacksMap.entries()).find(
-                  ([_, value]) => value.channelId === event.data.channelId
-                );
-                if (callback) {
-                  callbacksMap.delete(callback[0]);
-                }
-              } else if (event.data.chunk) {
-                controller.enqueue(new Uint8Array(event.data.chunk));
-              }
-            }
-          } else if (event.data.type === 'storageGet') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-            } else {
-              callback.resolve(event.data.result);
-            }
-            callbacksMap.delete(event.data.id);
-          } else if (event.data.type === 'storageSet') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-            } else {
-              callback.resolve(event.data.result);
-            }
-            callbacksMap.delete(event.data.id);
-          } else if (event.data.type === 'storageDelete') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-            } else {
-              callback.resolve(event.data.result);
-            }
-            callbacksMap.delete(event.data.id);
-          } else if (event.data.type === 'storageList') {
-            const callback = callbacksMap.get(event.data.id);
-            if (event.data.error) {
-              callback.reject(new Error(event.data.error));
-            } else {
-              callback.resolve(event.data.result);
-            }
-            callbacksMap.delete(event.data.id);
-          }
-        });
-
-        window.addEventListener('click', (event) => {
-          const isEl = event.target instanceof HTMLElement;
-          if (!isEl) return;
-    
-          // find ancestor links
-          const linkEl = event.target.closest("a");
-          if (!linkEl || !linkEl.href) return;
-    
-          event.preventDefault();
-          event.stopImmediatePropagation();
-    
-          if (linkEl.href.startsWith("blob-request:")) {
-            const blob = getBlobFromURL(linkEl.href);
-            if (!blob) return;
-            void blob.arrayBuffer().then((data) => {
-              window.parent.postMessage({
-                type: "downloadFile",
-                filename: linkEl.download,
-                data,
-                mimeType: blob.type || "application/octet-stream",
-              });
-            });
-          } else if (linkEl.href.startsWith("data:")) {
-            const [header, base64Data] = linkEl.href.split(",");
-            const mimeMatch = header.match(/data:([^;]+)/);
-            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
-            const binaryString = atob(base64Data);
-            const data = Uint8Array.from(binaryString, (c) =>
-              c.charCodeAt(0),
-            ).buffer;
-            window.parent.postMessage({
-              type: "downloadFile",
-              filename: linkEl.download,
-              data,
-              mimeType,
-            });
-          } else {
-            let linkUrl;
-            try {
-              linkUrl = new URL(linkEl.href);
-            } catch (error) {
-              return;
-            }
-    
-            if (linkUrl.hostname === window.location.hostname) return;
-      
-            window.parent.postMessage({
-              type: 'openExternal',
-              href: linkEl.href,
-            }, '*');
-          }
-      });
-
-        const originalOpen = window.open;
-        window.open = function (url) {
-          window.parent.postMessage({
-            type: "openExternal",
-            href: url,
-          }, "*");
-        };
-
-        window.addEventListener('error', (event) => {
-          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
-        });
-      })();
-    </script>
-  
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BigHead Character Cooker</title>
@@ -547,6 +260,37 @@
             padding: 20px;
         }
 
+        .female-toggle {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-label input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #8b5cf6;
+        }
+
+        .toggle-text {
+            color: #e0e7ff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+        }
+
         @media (max-width: 1200px) {
             .main-content {
                 flex-direction: column;
@@ -588,7 +332,7 @@
         }
     </style>
 </head>
-<body id="artifacts-component-root-html">
+<body>
     <div class="container">
         <h1>🎨🍔 BigHead Character Cooker</h1>
         <button class="mobile-toggle" id="mobileToggle" onclick="toggleCategories()">
@@ -610,26 +354,271 @@
     <script>
         // Configuration - Update these arrays with your actual image filenames
         const imageData = {
-            EYES: ['eyes1.png', 'eyes2.png', 'eyes3.png'],
-            MOUTH: ['mouth1.png', 'mouth2.png', 'mouth3.png'],
-            HEAD: ['head1.png', 'head2.png', 'head3.png'],
-            OUTFIT: ['outfit1.png', 'outfit2.png', 'outfit3.png'],
-            TEXTURE: ['texture1.png', 'texture2.png', 'texture3.png'],
-            BODY: ['body1.png', 'body2.png', 'body3.png'],
-            BACKGROUND: ['background1.png', 'background2.png', 'background3.png']
+            EYES: [
+                'Alien.png',
+                'Annoyed.png',
+                'Curious.png',
+                'Demonic.png',
+                'Diamond.png',
+                'Dots.png',
+                'Grumpy.png',
+                'Hypnotized.png',
+                'Infuriated.png',
+                'Insect.png',
+                'Joy.png',
+                'Light Bright.png',
+                'Monocle.png',
+                'Ouchy.png',
+                'Paranoid.png',
+                'Possessed.png',
+                'Ruby Stare.png',
+                'Spider.png',
+                'Stare.png',
+                'Stoney Eyes.png',
+                'Sunglasses.png',
+                'Surprised.png',
+                'Tears.png',
+                'Deceased.png',
+                'Too Chill.png',
+                'VR Headset.png',
+                '3D Glasses.png',
+                'Blink.png',
+                'Stern.png',
+                'Tears.gif'
+            ],
+            EYELASHES: ['Eyelashes.png'], // Single image for female toggle
+            MOUTH: [
+                'Simpleton.png',
+                'Stache.png',
+                'Creeper.png',
+                'Pierced.png',
+                'Fangs.png',
+                'Gold Teeth.png',
+                'Diamond Teeth.png',
+                'Birdy.png',
+                'Panic.png',
+                'Sss.png',
+                'Ahh.png',
+                'Ehh.png',
+                'Uhh.png',
+                'LLL.png',
+                'Rrr.png',
+                'Fff.png',
+                'Ooo.png',
+                'Thh.png',
+                'Eee.png',
+                'Mmm.png',
+                'Haha.png',
+                'Rofl.png',
+                'Bean Frown.png',
+                'Bean Smile.png',
+                'Smirk.png',
+                'Bored.png',
+                'Gas Mask.png',
+                'SCUBA TEMP.png'
+            ],
+            HEAD: [
+                'Antenna.png',
+                'Bandana Bro.png',
+                'Beanie.png',
+                'Blonde Beanie.png',
+                'Blonde Bun.png',
+                'Blue Bedhead.png',
+                'Brain Squid.png',
+                'Bravo.png',
+                'Brunette Beanie.png',
+                'Brunette Ponytail.png',
+                'Burger Crown.png',
+                'Captain Hat.png',
+                'Cat Hat.png',
+                'Chad Bandana.png',
+                'Cherry Sundae.png',
+                'Clown Wig.png',
+                'Fancy Hat.png',
+                'Fireman.png',
+                'Flame Princess.png',
+                'Fossilized.png',
+                'Gamer Girl.png',
+                'Ginger Ponytail.png',
+                'Heated.png',
+                'Horny Horns.png',
+                'Hunted.png',
+                'Jester.png',
+                'Kingly.png',
+                'Mad Hatter.png',
+                'Masked Up.png',
+                'Mohawk Blue.png',
+                'Mohawk Green.png',
+                'Mohawk Red.png',
+                'Mortricia.png',
+                'None.png',
+                'Outlaw.png',
+                'Overload.png',
+                'Patrol Cap.png',
+                'Pharaoh Hat.png',
+                'Pink Pigtails.png',
+                'Powdered Wig.png',
+                'Press Pass.png',
+                'Propeller.png',
+                'Rainbow Babe.png',
+                'Recon Helmet.png',
+                'Robin Hood.png',
+                'Santa Hat.png',
+                'Sewer Slime.png',
+                'Snapback Blue.png',
+                'Snapback Hippy.png',
+                'Snapback Red.png',
+                'Snapback Yellow.png',
+                'Sombrero.png',
+                'Spiritual.png',
+                'Surgeon.png',
+                'UwU Kitty.png',
+                'Valhalla Cap.png',
+                'Way Dizzy.png'
+            ],
+            OUTFIT: [
+                'Blue Tee.png',
+                'Blueberry Dye.png',
+                'Degen Green.png',
+                'Degen Purple.png',
+                'Earthy Dye.png',
+                'Hodl Black.png',
+                'Hodl White.png',
+                'Locked Up.png',
+                'Moto-X.png',
+                'Orange Zip.png',
+                'Passion Dye.png',
+                'Pink Zip.png',
+                'Raider Ref.png',
+                'Red Tee.png',
+                'Smally Bigs.png',
+                'Yellow Tee.png',
+                'Blue Zip.png',
+                'Red Zip.png',
+                'White Zip.png',
+                'Hornet Zip.png',
+                'Ghostly Zip.png',
+                'Gold Jacket.png',
+                'Tuxedo.png',
+                'Thrashed.png',
+                'The Fuzz.png',
+                'Pin Striped.png',
+                'Designer Zip.png',
+                'Luxury Zip.png',
+                'Explorer.png',
+                'Power Armor.png',
+                'Shinobi.png',
+                'Thrilled.png',
+                'Trenches.png',
+                'Ski Jacket.png',
+                'Sled Jacket.png',
+                'Commando.png',
+                'Space Cadet.png',
+                'None.png',
+                'Burgler.png',
+                'Commandant.png',
+                'Golden Knight.png',
+                'Honey Bee.png',
+                'Necromancer.png',
+                'Paladin.png',
+                'Refined Suit.png',
+                'Sexy Jacket.png',
+                'Stoner Hoodie.png',
+                'The Duke.png',
+                'Rave Hoodie.png',
+                'Scuba suit temp.png',
+                'Burger Suit.png',
+                'Scrubs.png'
+            ],
+            BREASTS: ['Breasts.png'], // Single image for female toggle
+            TEXTURE: [
+                'Blood.png',
+                'Acid.png',
+                'None.png',
+                'Ink.png',
+                'Dart Frog Blue.png',
+                'Dart Frog Red.png',
+                'Dart Frog Yellow.png',
+                'Magical.png',
+                'Puzzled.png',
+                'Rug Life Ink.png',
+                'Matrix.png',
+                'Pulverized.png'
+            ],
+            BODY: [
+                'Blank.png',
+                'Charcoal.png',
+                'High Voltage.png',
+                'Nebulous.png',
+                'Pinky.png',
+                'Shockwave.png',
+                'Tangerine.png',
+                'Turquoise.png',
+                'Woody.png',
+                'Frogger.png',
+                'Area 51.png',
+                'Dark Tone.png',
+                'Mid Tone.png',
+                'Light Tone.png',
+                'Jolly Roger.png',
+                'Cyber Punk.png',
+                'Talking Corpse.png',
+                'Day Tripper.png',
+                'Meat Lover.png',
+                'Golden God.png',
+                'Chrome Dome.png',
+                'Candy Gloss.png',
+                'Man On Fire.png',
+                'Water Boy.png',
+                'Icecream Man.png',
+                'Reptilian.png',
+                'Juiced Up.png',
+                'Toxic Waste.png',
+                'Love Potion.png',
+                'Pop Artist.png',
+                'Autopsy.png',
+                'Ghostly.png',
+                'Blue Screen.png',
+                'Networker.png'
+            ],
+            BACKGROUND: [
+                'Natural.png',
+                'Mania.png',
+                'Regal.png',
+                'Lavish.png',
+                'Sunflower.png',
+                'Snowflake.png',
+                'Bleach.png',
+                'Vibes.png',
+                'Burst.png',
+                'Aquatic.png',
+                'None.png',
+                'Passionate.png',
+                'Envious.png',
+                'Enlightened.png',
+                'Haunted.png',
+                'Cursed.png'
+            ]
         };
 
         // Layer order (top to bottom in rendering)
-        const layerOrder = ['EYES', 'MOUTH', 'HEAD', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUND'];
+        const layerOrder = ['EYES', 'EYELASHES', 'MOUTH', 'HEAD', 'OUTFIT', 'BREASTS', 'TEXTURE', 'BODY', 'BACKGROUND'];
+        
+        // Categories that are visible/adjustable by user (excludes toggle-only layers)
+        const visibleCategories = ['EYES', 'MOUTH', 'HEAD', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUND'];
+        
+        // Female-only categories (controlled by female checkbox)
+        const femaleOnlyCategories = ['EYELASHES', 'BREASTS'];
 
         // State management
         const state = {
             currentIndices: {},
             loadedImages: {},
-            categories: layerOrder
+            categories: visibleCategories,
+            femaleMode: false // Track female toggle state
         };
 
-        // Initialize indices
+        // Initialize indices for all layers
         layerOrder.forEach(category => {
             state.currentIndices[category] = 0;
             state.loadedImages[category] = [];
@@ -646,6 +635,9 @@
             for (const category of layerOrder) {
                 const categoryImages = imageData[category];
                 
+                // Use "GIRL" folder for female-only categories, otherwise use category name
+                const folderName = femaleOnlyCategories.includes(category) ? 'GIRL' : category;
+                
                 for (let i = 0; i < categoryImages.length; i++) {
                     const promise = new Promise((resolve, reject) => {
                         const img = new Image();
@@ -655,11 +647,11 @@
                             resolve();
                         };
                         img.onerror = () => {
-                            console.warn(`Failed to load: ${category}/${categoryImages[i]}`);
+                            console.warn(`Failed to load: ${folderName}/${categoryImages[i]}`);
                             state.loadedImages[category][i] = null;
                             resolve(); // Resolve anyway to continue
                         };
-                        img.src = `${category}/${categoryImages[i]}`;
+                        img.src = `${folderName}/${categoryImages[i]}`;
                     });
                     promises.push(promise);
                 }
@@ -677,6 +669,12 @@
             // Draw layers in reverse order (background first, eyes last)
             for (let i = layerOrder.length - 1; i >= 0; i--) {
                 const category = layerOrder[i];
+                
+                // Skip female-only categories if female mode is off
+                if (femaleOnlyCategories.includes(category) && !state.femaleMode) {
+                    continue;
+                }
+                
                 const index = state.currentIndices[category];
                 const img = state.loadedImages[category][index];
 
@@ -740,7 +738,19 @@
             const panel = document.getElementById('categoriesPanel');
             panel.innerHTML = '';
 
-            layerOrder.forEach(category => {
+            // Add female toggle checkbox
+            const toggleDiv = document.createElement('div');
+            toggleDiv.className = 'female-toggle';
+            toggleDiv.innerHTML = `
+                <label class="toggle-label">
+                    <input type="checkbox" id="femaleToggle" onchange="toggleFemaleMode()">
+                    <span class="toggle-text">👩 Female Character</span>
+                </label>
+            `;
+            panel.appendChild(toggleDiv);
+
+            // Build categories (only visible ones, not toggle layers)
+            visibleCategories.forEach(category => {
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'category';
                 
@@ -764,9 +774,16 @@
             });
 
             // Update all previews
-            layerOrder.forEach(category => {
+            visibleCategories.forEach(category => {
                 updateCategoryPreview(category);
             });
+        }
+
+        // Toggle female mode
+        function toggleFemaleMode() {
+            const checkbox = document.getElementById('femaleToggle');
+            state.femaleMode = checkbox.checked;
+            renderCharacter();
         }
 
         // Export PNG
