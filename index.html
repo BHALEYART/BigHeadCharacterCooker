@@ -291,6 +291,14 @@
             text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
         }
 
+        .toggle-hint {
+            color: #a5b4fc;
+            font-size: 14px;
+            margin-top: 8px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
         @media (max-width: 1200px) {
             .main-content {
                 flex-direction: column;
@@ -759,6 +767,7 @@
                     <input type="checkbox" id="femaleToggle" onchange="toggleFemaleMode()">
                     <span class="toggle-text">👩 Female Character</span>
                 </label>
+                <div class="toggle-hint">(Pair with certain Eyes, Head, and Outfit)</div>
             `;
             panel.appendChild(toggleDiv);
 
