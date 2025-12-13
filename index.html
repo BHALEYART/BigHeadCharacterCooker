@@ -355,9 +355,9 @@
         // Configuration - Update these arrays with your actual image filenames
         const imageData = {
             EYES: [
+                'Curious.png',
                 'Alien.png',
                 'Annoyed.png',
-                'Curious.png',
                 'Demonic.png',
                 'Diamond.png',
                 'Dots.png',
@@ -388,6 +388,7 @@
             ],
             EYELASHES: ['Eyelashes.png'], // Single image for female toggle
             MOUTH: [
+                'Mmm.png',
                 'Simpleton.png',
                 'Stache.png',
                 'Creeper.png',
@@ -407,7 +408,6 @@
                 'Ooo.png',
                 'Thh.png',
                 'Eee.png',
-                'Mmm.png',
                 'Haha.png',
                 'Rofl.png',
                 'Bean Frown.png',
@@ -580,7 +580,7 @@
                 'Blue Screen.png',
                 'Networker.png'
             ],
-            BACKGROUND: [
+            BACKGROUNDS: [
                 'None.png',
                 'Natural.png',
                 'Mania.png',
@@ -601,10 +601,10 @@
         };
 
         // Layer order (top to bottom in rendering)
-        const layerOrder = ['EYES', 'EYELASHES', 'MOUTH', 'HEAD', 'BREASTS', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUND'];
+        const layerOrder = ['EYES', 'EYELASHES', 'MOUTH', 'HEAD', 'BREASTS', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUNDS'];
         
         // Categories that are visible/adjustable by user (excludes toggle-only layers)
-        const visibleCategories = ['EYES', 'MOUTH', 'HEAD', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUND'];
+        const visibleCategories = ['EYES', 'MOUTH', 'HEAD', 'OUTFIT', 'TEXTURE', 'BODY', 'BACKGROUNDS'];
         
         // Female-only categories (controlled by female checkbox)
         const femaleOnlyCategories = ['EYELASHES', 'BREASTS'];
