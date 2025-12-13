@@ -637,6 +637,8 @@
         // Preload all images
         async function preloadImages() {
             const promises = [];
+            let successCount = 0;
+            let failCount = 0;
             
             for (const category of layerOrder) {
                 const categoryImages = imageData[category];
@@ -650,10 +652,13 @@
                         img.crossOrigin = "anonymous";
                         img.onload = () => {
                             state.loadedImages[category][i] = img;
+                            successCount++;
+                            console.log(`✓ Loaded: ${folderName}/${categoryImages[i]}`);
                             resolve();
                         };
                         img.onerror = () => {
-                            console.warn(`Failed to load: ${folderName}/${categoryImages[i]}`);
+                            failCount++;
+                            console.error(`✗ FAILED to load: ${folderName}/${categoryImages[i]}`);
                             state.loadedImages[category][i] = null;
                             resolve(); // Resolve anyway to continue
                         };
@@ -664,7 +669,10 @@
             }
 
             await Promise.all(promises);
-            console.log('All images loaded');
+            console.log(`\n=== IMAGE LOADING COMPLETE ===`);
+            console.log(`Success: ${successCount} images`);
+            console.log(`Failed: ${failCount} images`);
+            console.log(`==============================\n`);
         }
 
         // Render the character
