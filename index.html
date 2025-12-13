@@ -620,7 +620,13 @@
 
         // Initialize indices for all layers
         layerOrder.forEach(category => {
-            state.currentIndices[category] = 0;
+            // Check if this category has a "None.png" option
+            const noneIndex = imageData[category].findIndex(filename => 
+                filename.toLowerCase() === 'none.png'
+            );
+            
+            // Set to "None" if it exists, otherwise default to 0
+            state.currentIndices[category] = noneIndex !== -1 ? noneIndex : 0;
             state.loadedImages[category] = [];
         });
 
