@@ -858,6 +858,70 @@
             console.log('DOM is ready');
         }
         
+        // Create on-page console display
+        const consoleDiv = document.createElement('div');
+        consoleDiv.id = 'onPageConsole';
+        consoleDiv.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            background: rgba(0, 0, 0, 0.95);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 99999;
+            border-top: 3px solid #8b5cf6;
+            display: none;
+        `;
+        document.body.appendChild(consoleDiv);
+        
+        // Hijack console.log to display on page
+        const originalLog = console.log;
+        const originalError = console.error;
+        const logs = [];
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.join(' ');
+            logs.push({ type: 'log', message });
+            updateConsoleDiv();
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.join(' ');
+            logs.push({ type: 'error', message });
+            updateConsoleDiv();
+        };
+        
+        function updateConsoleDiv() {
+            const html = logs.map(log => {
+                const color = log.type === 'error' ? '#ff4444' : '#00ff00';
+                const prefix = log.type === 'error' ? '❌ ' : '✓ ';
+                return `<div style="color: ${color}; margin: 2px 0;">${prefix}${log.message}</div>`;
+            }).join('');
+            consoleDiv.innerHTML = html + '<div style="color: #8b5cf6; margin-top: 10px;">Press H to hide console</div>';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        // Toggle console with H key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'h' || e.key === 'H') {
+                if (consoleDiv.style.display === 'none') {
+                    consoleDiv.style.display = 'block';
+                    console.log('=== Console Display Shown (Press H to hide) ===');
+                } else {
+                    consoleDiv.style.display = 'none';
+                }
+            }
+        });
+        
+        console.log('📝 Press H key to show/hide this console on the page');
+        
         // Configuration - Update these arrays with your actual image filenames
         const imageData = {
             EYES: [
@@ -1141,6 +1205,10 @@
 
         // Preload all images
         async function preloadImages() {
+            console.log('=== preloadImages() CALLED ===');
+            console.log('layerOrder:', layerOrder);
+            console.log('imageData keys:', Object.keys(imageData));
+            
             const promises = [];
             let successCount = 0;
             let failCount = 0;
@@ -1148,8 +1216,12 @@
             
             // Calculate total images
             for (const category of layerOrder) {
-                totalImages += imageData[category].length;
+                const categoryLength = imageData[category] ? imageData[category].length : 0;
+                console.log(`Category ${category}: ${categoryLength} images`);
+                totalImages += categoryLength;
             }
+            
+            console.log(`TOTAL IMAGES TO LOAD: ${totalImages}`);
             
             console.log(`Starting to load ${totalImages} images...`);
             
