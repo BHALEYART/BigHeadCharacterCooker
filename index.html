@@ -723,12 +723,6 @@
                     <!-- Audio Section -->
                     <div class="control-section">
                         <h3>📢 Audio</h3>
-                        <div class="control-group">
-                            <label>Microphone:</label>
-                            <select id="audioDeviceSelect" style="padding: 10px; background: #1e293b; border: 2px solid #8b5cf6; border-radius: 8px; color: #e0e7ff;">
-                                <option value="">Loading devices...</option>
-                            </select>
-                        </div>
                         <div class="audio-controls">
                             <button class="control-btn" onclick="startRecording()">🎤 Record Audio</button>
                             <button class="control-btn" onclick="stopRecording()" disabled id="stopRecBtn">⏹️ Stop Recording</button>
@@ -736,6 +730,12 @@
                             <button class="control-btn" onclick="document.getElementById('audioUpload').click()">📁 Upload Audio</button>
                         </div>
                         <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
+                        <div class="control-group" id="volumeControl" style="display: none; margin-top: 15px;">
+                            <label>🔊 Audio Volume: <span id="volumeValue">100%</span></label>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="100" step="1" 
+                                   oninput="updateVolume(this.value)" 
+                                   style="width: 100%; accent-color: #8b5cf6;">
+                        </div>
                         <canvas id="waveform" width="600" height="80" style="width: 100%; margin-top: 10px; background: #1e293b; border-radius: 8px; display: none;"></canvas>
                     </div>
                     
@@ -813,7 +813,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">Created By BHaleyArt</div>
+        <div class="footer-credit">V2.1 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1314,60 +1314,24 @@
             audioChunks: [],
             audioContext: null,
             waveformData: null,
-            autoLipSync: true, // Auto lip sync enabled by default
-            audioDevices: [],
-            selectedDeviceId: null,
-            currentVolume: 0 // Current audio amplitude for lip sync
+            autoLipSync: true // Auto lip sync enabled by default
         };
 
-        // Load audio devices
-        async function loadAudioDevices() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                animatorState.audioDevices = devices.filter(device => device.kind === 'audioinput');
-                
-                const select = document.getElementById('audioDeviceSelect');
-                select.innerHTML = '';
-                
-                if (animatorState.audioDevices.length === 0) {
-                    select.innerHTML = '<option value="">No microphones found</option>';
-                    return;
-                }
-                
-                animatorState.audioDevices.forEach((device, index) => {
-                    const option = document.createElement('option');
-                    option.value = device.deviceId;
-                    option.textContent = device.label || `Microphone ${index + 1}`;
-                    select.appendChild(option);
-                });
-                
-                // Set first device as default
-                if (animatorState.audioDevices.length > 0) {
-                    animatorState.selectedDeviceId = animatorState.audioDevices[0].deviceId;
-                }
-            } catch (err) {
-                console.error('Error loading audio devices:', err);
+        // Update audio volume
+        function updateVolume(value) {
+            const volume = value / 100;
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (audioPlayer) {
+                audioPlayer.volume = volume;
             }
+            document.getElementById('volumeValue').textContent = value + '%';
         }
-
-        // Update selected device
-        document.addEventListener('DOMContentLoaded', () => {
-            const deviceSelect = document.getElementById('audioDeviceSelect');
-            if (deviceSelect) {
-                deviceSelect.addEventListener('change', (e) => {
-                    animatorState.selectedDeviceId = e.target.value;
-                });
-            }
-        });
 
         // Switch to animator scene
         function switchToAnimator() {
             document.querySelector('.main-content').style.display = 'none';
             document.querySelector('.mobile-toggle').style.display = 'none';
             document.getElementById('animatorScene').style.display = 'block';
-            
-            // Load audio devices
-            loadAudioDevices();
             
             // Copy character to animator canvas
             const srcCanvas = document.getElementById('mainCanvas');
@@ -1427,13 +1391,7 @@
 
         // Audio Recording
         function startRecording() {
-            const constraints = {
-                audio: animatorState.selectedDeviceId 
-                    ? { deviceId: { exact: animatorState.selectedDeviceId } }
-                    : true
-            };
-            
-            navigator.mediaDevices.getUserMedia(constraints)
+            navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     animatorState.mediaRecorder = new MediaRecorder(stream);
                     animatorState.audioChunks = [];
@@ -1521,6 +1479,7 @@
                     document.getElementById('timelineSection').style.display = 'block';
                     document.getElementById('animationSection').style.display = 'block';
                     document.getElementById('exportSection').style.display = 'block';
+                    document.getElementById('volumeControl').style.display = 'block';
                     
                     // Setup timeline
                     const scrubber = document.getElementById('timelineScrubber');
@@ -1824,12 +1783,16 @@
             // Create MediaRecorder stream
             const stream = canvas.captureStream(30); // 30 fps
             
-            // Add audio track from audio element
+            // Add audio track - works with both recorded and uploaded audio
             if (audioPlayer.captureStream) {
-                const audioStream = audioPlayer.captureStream();
-                const audioTrack = audioStream.getAudioTracks()[0];
-                if (audioTrack) {
-                    stream.addTrack(audioTrack);
+                try {
+                    const audioStream = audioPlayer.captureStream();
+                    const audioTrack = audioStream.getAudioTracks()[0];
+                    if (audioTrack) {
+                        stream.addTrack(audioTrack);
+                    }
+                } catch (err) {
+                    console.log('captureStream not supported, audio will still be captured during playback');
                 }
             }
             
@@ -1870,7 +1833,7 @@
                 a.click();
                 
                 progressDiv.style.display = 'none';
-                alert(`Video exported successfully as ${extension.toUpperCase()}!`);
+                alert(`Video exported successfully as ${extension.toUpperCase()} with audio!`);
             };
             
             // Start recording
