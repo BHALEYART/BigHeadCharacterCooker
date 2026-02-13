@@ -736,6 +736,12 @@
                             <button class="control-btn" onclick="document.getElementById('audioUpload').click()">📁 Upload Audio</button>
                         </div>
                         <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
+                        <div class="control-group" id="volumeControl" style="display: none; margin-top: 15px;">
+                            <label>🔊 Audio Volume: <span id="volumeValue">100%</span></label>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="100" step="1" 
+                                   oninput="updateVolume(this.value)" 
+                                   style="width: 100%; accent-color: #8b5cf6;">
+                        </div>
                         <canvas id="waveform" width="600" height="80" style="width: 100%; margin-top: 10px; background: #1e293b; border-radius: 8px; display: none;"></canvas>
                     </div>
                     
@@ -1317,8 +1323,19 @@
             autoLipSync: true, // Auto lip sync enabled by default
             audioDevices: [],
             selectedDeviceId: null,
-            currentVolume: 0 // Current audio amplitude for lip sync
+            currentVolume: 0, // Current audio amplitude for lip sync
+            audioVolume: 1.0 // Audio playback volume (0.0 to 1.0)
         };
+
+        // Update audio volume
+        function updateVolume(value) {
+            animatorState.audioVolume = value / 100;
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (audioPlayer) {
+                audioPlayer.volume = animatorState.audioVolume;
+            }
+            document.getElementById('volumeValue').textContent = value + '%';
+        }
 
         // Load audio devices
         async function loadAudioDevices() {
@@ -1521,6 +1538,11 @@
                     document.getElementById('timelineSection').style.display = 'block';
                     document.getElementById('animationSection').style.display = 'block';
                     document.getElementById('exportSection').style.display = 'block';
+                    document.getElementById('volumeControl').style.display = 'block';
+                    
+                    // Set initial volume
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    audioPlayer.volume = animatorState.audioVolume;
                     
                     // Setup timeline
                     const scrubber = document.getElementById('timelineScrubber');
@@ -1539,7 +1561,7 @@
                         if (animatorState.autoLipSync && animatorState.audioBuffer) {
                             const sampleRate = animatorState.audioBuffer.sampleRate;
                             const currentSample = Math.floor(audioPlayer.currentTime * sampleRate);
-                            const windowSize = Math.floor(sampleRate * 0.05); // 50ms window
+                            const windowSize = Math.floor(sampleRate * 0.02); // 20ms window for faster response
                             
                             const channelData = animatorState.audioBuffer.getChannelData(0);
                             let sum = 0;
@@ -1753,16 +1775,20 @@
             if (animatorState.autoLipSync && !activeMouth && !currentMouthOverride) {
                 const volume = animatorState.currentVolume;
                 
-                // Map volume to mouth shapes
-                // Threshold tuning: adjust these values for sensitivity
-                if (volume > 0.15) {
-                    activeMouth = 'Ahh.png'; // Wide open for loud sounds
-                } else if (volume > 0.08) {
-                    activeMouth = 'Ooo.png'; // Medium open
-                } else if (volume > 0.03) {
-                    activeMouth = 'Eee.png'; // Slight open
+                // More varied mouth shapes with tighter thresholds for faster changes
+                // Using smaller ranges creates more natural variation
+                if (volume > 0.2) {
+                    activeMouth = 'Ahh.png'; // Very loud - wide open
+                } else if (volume > 0.12) {
+                    activeMouth = 'Ooo.png'; // Loud - round open
+                } else if (volume > 0.07) {
+                    activeMouth = 'Ehh.png'; // Medium - mid open
+                } else if (volume > 0.04) {
+                    activeMouth = 'Eee.png'; // Quiet - slight open
+                } else if (volume > 0.015) {
+                    activeMouth = 'Mmm.png'; // Very quiet - almost closed
                 } else {
-                    activeMouth = 'Mmm.png'; // Closed for silence
+                    activeMouth = 'Mmm.png'; // Silence - closed
                 }
             }
             
