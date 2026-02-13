@@ -678,15 +678,25 @@
     </style>
 </head>
 <body>
+    <!-- Emergency fallback loading indicator -->
+    <script>
+        // This runs IMMEDIATELY as HTML loads
+        console.log('=== BODY LOADED - EMERGENCY SCRIPT RUNNING ===');
+        document.write('<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:24px;z-index:99999;text-align:center;"><div>🎨🍔 BigHead Loading...</div><div style="font-size:14px;margin-top:10px;">Check console (F12) for details</div></div>');
+    </script>
+    
     <!-- Loading Screen -->
-    <div id="loadingScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
+    <div id="loadingScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); display: flex !important; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
         <h1 style="color: #e0e7ff; font-size: 2.5em; text-shadow: 0 0 20px rgba(139, 92, 246, 0.5); margin-bottom: 30px;">🎨🍔 BigHead Character Cooker</h1>
         <div style="width: 400px; max-width: 80%; background: #1e293b; border-radius: 15px; padding: 20px; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);">
-            <div style="color: #c4b5fd; font-size: 18px; margin-bottom: 15px; text-align: center;" id="loadingText">Loading images...</div>
+            <div style="color: #c4b5fd; font-size: 18px; margin-bottom: 15px; text-align: center;" id="loadingText">Initializing...</div>
             <div style="width: 100%; height: 30px; background: #374151; border-radius: 15px; overflow: hidden; position: relative;">
                 <div id="loadingBar" style="height: 100%; background: linear-gradient(90deg, #8b5cf6, #a78bfa); width: 0%; transition: width 0.3s ease;"></div>
             </div>
-            <div style="color: #a5b4fc; font-size: 14px; margin-top: 10px; text-align: center;" id="loadingProgress">0 / 0 images loaded</div>
+            <div style="color: #a5b4fc; font-size: 14px; margin-top: 10px; text-align: center;" id="loadingProgress">Starting...</div>
+            <div style="color: #a5b4fc; font-size: 12px; margin-top: 15px; text-align: center; font-style: italic;">
+                Stuck? Press F12 to open console and check for errors
+            </div>
         </div>
     </div>
     
@@ -835,6 +845,19 @@
     </div>
 
     <script>
+        // IMMEDIATE DIAGNOSTIC - runs before anything else
+        console.log('=== SCRIPT STARTED ===');
+        console.log('Current URL:', window.location.href);
+        console.log('Protocol:', window.location.protocol);
+        console.log('Hostname:', window.location.hostname);
+        
+        // Test if DOM is ready
+        if (document.readyState === 'loading') {
+            console.log('DOM is still loading...');
+        } else {
+            console.log('DOM is ready');
+        }
+        
         // Configuration - Update these arrays with your actual image filenames
         const imageData = {
             EYES: [
@@ -1404,6 +1427,34 @@
         // Start the app
         console.log('Executing init()...');
         init();
+        
+        // SAFETY TIMEOUT - if nothing happens after 30 seconds, show error
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const mainContainer = document.getElementById('mainContainer');
+            
+            if (loadingScreen && loadingScreen.style.display !== 'none') {
+                console.error('=== LOADING TIMEOUT ===');
+                console.error('App has been loading for 30+ seconds');
+                console.error('This usually means:');
+                console.error('1. Images are loading very slowly');
+                console.error('2. There was a JavaScript error');
+                console.error('3. Network issue');
+                
+                const loadingText = document.getElementById('loadingText');
+                if (loadingText) {
+                    loadingText.innerHTML = '⚠️ Loading is taking longer than expected...<br><small style="font-size:14px;">Check console (F12) for details</small>';
+                    loadingText.style.color = '#f59e0b';
+                }
+                
+                // Force show app anyway after 45 seconds
+                setTimeout(() => {
+                    console.log('Force showing app...');
+                    if (loadingScreen) loadingScreen.style.display = 'none';
+                    if (mainContainer) mainContainer.style.display = 'block';
+                }, 15000);
+            }
+        }, 30000);
 
         // ===== ANIMATOR FUNCTIONALITY =====
         
