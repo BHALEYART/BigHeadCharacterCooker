@@ -711,8 +711,10 @@
                     </div>
                     <div class="background-selector">
                         <label>Background:</label>
-                        <button class="bg-btn active" onclick="setAnimBg('green')" data-bg="green">🟢 Green Screen</button>
-                        <button class="bg-btn" onclick="setAnimBg('blue')" data-bg="blue">🔵 Blue Screen</button>
+                        <button class="bg-btn active" onclick="setAnimBg('green')" data-bg="green">🟢 Green</button>
+                        <button class="bg-btn" onclick="setAnimBg('blue')" data-bg="blue">🔵 Blue</button>
+                        <button class="bg-btn" onclick="setAnimBg('black')" data-bg="black">⚫ Black</button>
+                        <button class="bg-btn" onclick="setAnimBg('white')" data-bg="white">⚪ White</button>
                     </div>
                 </div>
                 
@@ -721,6 +723,12 @@
                     <!-- Audio Section -->
                     <div class="control-section">
                         <h3>📢 Audio</h3>
+                        <div class="control-group">
+                            <label>Microphone:</label>
+                            <select id="audioDeviceSelect" style="padding: 10px; background: #1e293b; border: 2px solid #8b5cf6; border-radius: 8px; color: #e0e7ff;">
+                                <option value="">Loading devices...</option>
+                            </select>
+                        </div>
                         <div class="audio-controls">
                             <button class="control-btn" onclick="startRecording()">🎤 Record Audio</button>
                             <button class="control-btn" onclick="stopRecording()" disabled id="stopRecBtn">⏹️ Stop Recording</button>
@@ -746,7 +754,17 @@
                         <h3>🎭 Animation Controls</h3>
                         
                         <div class="control-group">
-                            <label>Mouth Shape:</label>
+                            <label class="toggle-label">
+                                <input type="checkbox" id="autoLipSync" onchange="toggleAutoLipSync()" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #8b5cf6;">
+                                <span style="color: #e0e7ff; font-weight: bold;">🤖 Auto Lip Sync (based on audio volume)</span>
+                            </label>
+                            <div style="color: #a5b4fc; font-size: 13px; margin-top: 5px; font-style: italic;">
+                                Mouth automatically opens/closes with audio. Uncheck for manual control.
+                            </div>
+                        </div>
+
+                        <div class="control-group" id="manualMouthControls" style="display: none;">
+                            <label>Manual Mouth Shape:</label>
                             <select id="mouthSelect" onchange="setMouthShape()">
                                 <option value="Mmm.png">Closed (Mmm)</option>
                                 <option value="Ahh.png">Open (Ahh)</option>
@@ -760,17 +778,18 @@
                         </div>
                         
                         <div class="control-group">
-                            <label>Eyes:</label>
+                            <label>Blinks & Eyes:</label>
                             <button class="control-btn-sm" onclick="addBlinkKeyframe()">👁️ Add Blink</button>
                             <select id="eyesSelect" onchange="setEyeExpression()">
-                                <option value="current">Keep Current</option>
+                                <option value="current">Keep Current Eyes</option>
                                 <option value="Curious.png">Curious</option>
                                 <option value="Surprised.png">Surprised</option>
                                 <option value="Joy.png">Joy</option>
                                 <option value="Grumpy.png">Grumpy</option>
-                                <option value="Blink.png">Blink</option>
+                                <option value="Annoyed.png">Annoyed</option>
+                                <option value="Stern.png">Stern</option>
                             </select>
-                            <button class="control-btn-sm" onclick="addEyeKeyframe()">➕ Add Keyframe</button>
+                            <button class="control-btn-sm" onclick="addEyeKeyframe()">➕ Add Expression</button>
                         </div>
                         
                         <div class="keyframe-list" id="keyframeList">
@@ -1285,7 +1304,7 @@
         // ===== ANIMATOR FUNCTIONALITY =====
         
         const animatorState = {
-            backgroundType: 'green', // 'green' or 'blue'
+            backgroundType: 'green', // 'green', 'blue', 'black', or 'white'
             audioBuffer: null,
             audioDuration: 0,
             currentTime: 0,
@@ -1294,14 +1313,61 @@
             mediaRecorder: null,
             audioChunks: [],
             audioContext: null,
-            waveformData: null
+            waveformData: null,
+            autoLipSync: true, // Auto lip sync enabled by default
+            audioDevices: [],
+            selectedDeviceId: null,
+            currentVolume: 0 // Current audio amplitude for lip sync
         };
+
+        // Load audio devices
+        async function loadAudioDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                animatorState.audioDevices = devices.filter(device => device.kind === 'audioinput');
+                
+                const select = document.getElementById('audioDeviceSelect');
+                select.innerHTML = '';
+                
+                if (animatorState.audioDevices.length === 0) {
+                    select.innerHTML = '<option value="">No microphones found</option>';
+                    return;
+                }
+                
+                animatorState.audioDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `Microphone ${index + 1}`;
+                    select.appendChild(option);
+                });
+                
+                // Set first device as default
+                if (animatorState.audioDevices.length > 0) {
+                    animatorState.selectedDeviceId = animatorState.audioDevices[0].deviceId;
+                }
+            } catch (err) {
+                console.error('Error loading audio devices:', err);
+            }
+        }
+
+        // Update selected device
+        document.addEventListener('DOMContentLoaded', () => {
+            const deviceSelect = document.getElementById('audioDeviceSelect');
+            if (deviceSelect) {
+                deviceSelect.addEventListener('change', (e) => {
+                    animatorState.selectedDeviceId = e.target.value;
+                });
+            }
+        });
 
         // Switch to animator scene
         function switchToAnimator() {
             document.querySelector('.main-content').style.display = 'none';
             document.querySelector('.mobile-toggle').style.display = 'none';
             document.getElementById('animatorScene').style.display = 'block';
+            
+            // Load audio devices
+            loadAudioDevices();
             
             // Copy character to animator canvas
             const srcCanvas = document.getElementById('mainCanvas');
@@ -1326,7 +1392,24 @@
         // Set animation background color
         function setAnimBg(type) {
             animatorState.backgroundType = type;
-            const color = type === 'green' ? '#00ff00' : '#0000ff';
+            let color;
+            
+            switch(type) {
+                case 'green':
+                    color = '#00ff00';
+                    break;
+                case 'blue':
+                    color = '#0000ff';
+                    break;
+                case 'black':
+                    color = '#000000';
+                    break;
+                case 'white':
+                    color = '#ffffff';
+                    break;
+                default:
+                    color = '#00ff00';
+            }
             
             // Update button states
             document.querySelectorAll('.bg-btn').forEach(btn => {
@@ -1344,7 +1427,13 @@
 
         // Audio Recording
         function startRecording() {
-            navigator.mediaDevices.getUserMedia({ audio: true })
+            const constraints = {
+                audio: animatorState.selectedDeviceId 
+                    ? { deviceId: { exact: animatorState.selectedDeviceId } }
+                    : true
+            };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
                 .then(stream => {
                     animatorState.mediaRecorder = new MediaRecorder(stream);
                     animatorState.audioChunks = [];
@@ -1439,12 +1528,27 @@
                     scrubber.value = 0;
                     updateTimelineDisplay();
                     
-                    // Setup audio player listener
+                    // Setup audio player listener for auto lip sync
                     const audioPlayer = document.getElementById('audioPlayer');
                     audioPlayer.addEventListener('timeupdate', () => {
                         animatorState.currentTime = audioPlayer.currentTime;
                         scrubber.value = audioPlayer.currentTime;
                         updateTimelineDisplay();
+                        
+                        // Calculate current volume for auto lip sync
+                        if (animatorState.autoLipSync && animatorState.audioBuffer) {
+                            const sampleRate = animatorState.audioBuffer.sampleRate;
+                            const currentSample = Math.floor(audioPlayer.currentTime * sampleRate);
+                            const windowSize = Math.floor(sampleRate * 0.05); // 50ms window
+                            
+                            const channelData = animatorState.audioBuffer.getChannelData(0);
+                            let sum = 0;
+                            for (let i = 0; i < windowSize && currentSample + i < channelData.length; i++) {
+                                sum += Math.abs(channelData[currentSample + i]);
+                            }
+                            animatorState.currentVolume = sum / windowSize;
+                        }
+                        
                         renderAnimatorFrame();
                     });
                 });
@@ -1503,6 +1607,16 @@
             if (timeDisplay) {
                 timeDisplay.textContent = `${animatorState.currentTime.toFixed(2)}s / ${animatorState.audioDuration.toFixed(2)}s`;
             }
+        }
+
+        // Toggle auto lip sync
+        function toggleAutoLipSync() {
+            const checkbox = document.getElementById('autoLipSync');
+            animatorState.autoLipSync = checkbox.checked;
+            
+            // Show/hide manual mouth controls
+            const manualControls = document.getElementById('manualMouthControls');
+            manualControls.style.display = checkbox.checked ? 'none' : 'block';
         }
 
         // Set current mouth shape
@@ -1597,7 +1711,24 @@
             const ctx = canvas.getContext('2d');
             
             // Set background color
-            const bgColor = animatorState.backgroundType === 'green' ? '#00ff00' : '#0000ff';
+            let bgColor;
+            switch(animatorState.backgroundType) {
+                case 'green':
+                    bgColor = '#00ff00';
+                    break;
+                case 'blue':
+                    bgColor = '#0000ff';
+                    break;
+                case 'black':
+                    bgColor = '#000000';
+                    break;
+                case 'white':
+                    bgColor = '#ffffff';
+                    break;
+                default:
+                    bgColor = '#00ff00';
+            }
+            
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
@@ -1618,8 +1749,28 @@
                 }
             }
             
-            // Apply manual overrides
-            if (currentMouthOverride) activeMouth = currentMouthOverride;
+            // Auto lip sync based on volume
+            if (animatorState.autoLipSync && !activeMouth && !currentMouthOverride) {
+                const volume = animatorState.currentVolume;
+                
+                // Map volume to mouth shapes
+                // Threshold tuning: adjust these values for sensitivity
+                if (volume > 0.15) {
+                    activeMouth = 'Ahh.png'; // Wide open for loud sounds
+                } else if (volume > 0.08) {
+                    activeMouth = 'Ooo.png'; // Medium open
+                } else if (volume > 0.03) {
+                    activeMouth = 'Eee.png'; // Slight open
+                } else {
+                    activeMouth = 'Mmm.png'; // Closed for silence
+                }
+            }
+            
+            // Apply manual overrides (only if auto lip sync is off)
+            if (!animatorState.autoLipSync && currentMouthOverride) {
+                activeMouth = currentMouthOverride;
+            }
+            
             if (currentEyeOverride) activeEyes = currentEyeOverride;
             if (shouldBlink) activeEyes = 'Blink.png';
             
@@ -1682,10 +1833,25 @@
                 }
             }
             
+            // Try MP4 first, fallback to WebM if not supported
+            let mimeType = 'video/mp4';
+            let extension = 'mp4';
+            
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                // Try H.264 in MP4
+                mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    // Fallback to WebM with VP9
+                    mimeType = 'video/webm;codecs=vp9,opus';
+                    extension = 'webm';
+                    console.log('MP4 not supported, using WebM');
+                }
+            }
+            
             const chunks = [];
             const recorder = new MediaRecorder(stream, {
-                mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 2500000
+                mimeType: mimeType,
+                videoBitsPerSecond: 5000000 // 5 Mbps for good quality
             });
             
             recorder.ondataavailable = (e) => {
@@ -1695,16 +1861,16 @@
             };
             
             recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
+                const blob = new Blob(chunks, { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `character-animation-${Date.now()}.webm`;
+                a.download = `character-animation-${Date.now()}.${extension}`;
                 a.click();
                 
                 progressDiv.style.display = 'none';
-                alert('Video exported successfully!');
+                alert(`Video exported successfully as ${extension.toUpperCase()}!`);
             };
             
             // Start recording
