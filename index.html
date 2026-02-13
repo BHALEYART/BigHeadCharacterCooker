@@ -363,6 +363,318 @@
                 display: flex !important;
             }
         }
+
+        /* ===== ANIMATOR SCENE STYLES ===== */
+        .animator-scene {
+            width: 100%;
+        }
+
+        .animator-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-3px);
+        }
+
+        .animator-header h2 {
+            color: #e0e7ff;
+            font-size: 2em;
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+
+        .animator-content {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .animator-preview {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .preview-container {
+            width: 500px;
+            height: 500px;
+            border: 3px solid #8b5cf6;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #00ff00;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+            position: relative;
+        }
+
+        #animatorCanvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .background-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .background-selector label {
+            color: #c4b5fd;
+            font-weight: bold;
+        }
+
+        .bg-btn {
+            padding: 10px 20px;
+            border: 2px solid #8b5cf6;
+            background: #1e293b;
+            color: #e0e7ff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .bg-btn:hover {
+            background: #8b5cf6;
+            transform: scale(1.05);
+        }
+
+        .bg-btn.active {
+            background: #8b5cf6;
+            border-color: #a78bfa;
+        }
+
+        .animator-controls {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: 700px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .animator-controls::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .animator-controls::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+
+        .animator-controls::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 10px;
+        }
+
+        .control-section {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .control-section h3 {
+            color: #c4b5fd;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-btn-sm {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn-sm:hover {
+            transform: scale(1.05);
+        }
+
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #timeline {
+            width: 100%;
+            background: #1e293b;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #timelineScrubber {
+            width: 100%;
+            accent-color: #8b5cf6;
+        }
+
+        .timeline-time {
+            color: #a5b4fc;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            color: #c4b5fd;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .control-group select {
+            padding: 10px;
+            background: #1e293b;
+            border: 2px solid #8b5cf6;
+            border-radius: 8px;
+            color: #e0e7ff;
+            font-size: 14px;
+        }
+
+        .keyframe-list {
+            margin-top: 15px;
+            padding: 15px;
+            background: #1e293b;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .keyframe-list strong {
+            color: #c4b5fd;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #keyframesDisplay {
+            color: #a5b4fc;
+            font-size: 13px;
+        }
+
+        .keyframe-item {
+            padding: 8px;
+            background: #374151;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .keyframe-delete {
+            background: #ef4444;
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .export-video-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .export-video-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #1e293b;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        #progressText {
+            text-align: center;
+            font-size: 14px;
+        }
+
+        @media (max-width: 1200px) {
+            .animator-content {
+                flex-direction: column;
+            }
+
+            .preview-container {
+                width: 100%;
+                max-width: 500px;
+                height: auto;
+                aspect-ratio: 1;
+            }
+
+            .animator-controls {
+                max-height: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -377,11 +689,111 @@
                     <canvas id="mainCanvas" width="1000" height="1000"></canvas>
                 </div>
                 <button class="export-btn" onclick="exportImage()">💾 Export PNG (1000x1000)</button>
+                <button class="export-btn" onclick="switchToAnimator()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); margin-top: 10px;">🎬 Animate Character</button>
             </div>
             <div class="categories-panel collapsed" id="categoriesPanel">
                 <div class="loading">Loading images...</div>
             </div>
         </div>
+        
+        <!-- ANIMATOR SCENE (Hidden by default) -->
+        <div class="animator-scene" id="animatorScene" style="display: none;">
+            <div class="animator-header">
+                <button class="back-btn" onclick="switchToCreator()">◀ Back to Character Creator</button>
+                <h2>🎬 Character Animator</h2>
+            </div>
+            
+            <div class="animator-content">
+                <!-- Left: Preview Canvas -->
+                <div class="animator-preview">
+                    <div class="preview-container">
+                        <canvas id="animatorCanvas" width="1000" height="1000"></canvas>
+                    </div>
+                    <div class="background-selector">
+                        <label>Background:</label>
+                        <button class="bg-btn active" onclick="setAnimBg('green')" data-bg="green">🟢 Green Screen</button>
+                        <button class="bg-btn" onclick="setAnimBg('blue')" data-bg="blue">🔵 Blue Screen</button>
+                    </div>
+                </div>
+                
+                <!-- Right: Controls -->
+                <div class="animator-controls">
+                    <!-- Audio Section -->
+                    <div class="control-section">
+                        <h3>📢 Audio</h3>
+                        <div class="audio-controls">
+                            <button class="control-btn" onclick="startRecording()">🎤 Record Audio</button>
+                            <button class="control-btn" onclick="stopRecording()" disabled id="stopRecBtn">⏹️ Stop Recording</button>
+                            <input type="file" id="audioUpload" accept="audio/*" onchange="loadAudioFile(event)" style="display: none;">
+                            <button class="control-btn" onclick="document.getElementById('audioUpload').click()">📁 Upload Audio</button>
+                        </div>
+                        <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
+                        <canvas id="waveform" width="600" height="80" style="width: 100%; margin-top: 10px; background: #1e293b; border-radius: 8px; display: none;"></canvas>
+                    </div>
+                    
+                    <!-- Timeline Section -->
+                    <div class="control-section" id="timelineSection" style="display: none;">
+                        <h3>⏱️ Timeline</h3>
+                        <div class="timeline-container">
+                            <canvas id="timeline" width="600" height="100"></canvas>
+                            <input type="range" id="timelineScrubber" min="0" max="100" value="0" step="0.1" style="width: 100%;">
+                            <div class="timeline-time" id="timelineTime">0.00s / 0.00s</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Animation Controls -->
+                    <div class="control-section" id="animationSection" style="display: none;">
+                        <h3>🎭 Animation Controls</h3>
+                        
+                        <div class="control-group">
+                            <label>Mouth Shape:</label>
+                            <select id="mouthSelect" onchange="setMouthShape()">
+                                <option value="Mmm.png">Closed (Mmm)</option>
+                                <option value="Ahh.png">Open (Ahh)</option>
+                                <option value="Ooo.png">Round (Ooo)</option>
+                                <option value="Eee.png">Wide (Eee)</option>
+                                <option value="Fff.png">Lips (Fff)</option>
+                                <option value="LLL.png">L Sound</option>
+                                <option value="Thh.png">Th Sound</option>
+                            </select>
+                            <button class="control-btn-sm" onclick="addMouthKeyframe()">➕ Add Keyframe</button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Eyes:</label>
+                            <button class="control-btn-sm" onclick="addBlinkKeyframe()">👁️ Add Blink</button>
+                            <select id="eyesSelect" onchange="setEyeExpression()">
+                                <option value="current">Keep Current</option>
+                                <option value="Curious.png">Curious</option>
+                                <option value="Surprised.png">Surprised</option>
+                                <option value="Joy.png">Joy</option>
+                                <option value="Grumpy.png">Grumpy</option>
+                                <option value="Blink.png">Blink</option>
+                            </select>
+                            <button class="control-btn-sm" onclick="addEyeKeyframe()">➕ Add Keyframe</button>
+                        </div>
+                        
+                        <div class="keyframe-list" id="keyframeList">
+                            <strong>Keyframes:</strong>
+                            <div id="keyframesDisplay">No keyframes yet</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Export Section -->
+                    <div class="control-section" id="exportSection" style="display: none;">
+                        <h3>📤 Export</h3>
+                        <button class="control-btn export-video-btn" onclick="exportVideo()">🎥 Export Video</button>
+                        <div id="exportProgress" style="display: none; margin-top: 10px; color: #a5b4fc;">
+                            <div class="progress-bar">
+                                <div id="progressFill"></div>
+                            </div>
+                            <div id="progressText">Preparing export...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="footer-credit">Created By BHaleyArt</div>
     </div>
 
@@ -869,6 +1281,455 @@
 
         // Start the app
         init();
+
+        // ===== ANIMATOR FUNCTIONALITY =====
+        
+        const animatorState = {
+            backgroundType: 'green', // 'green' or 'blue'
+            audioBuffer: null,
+            audioDuration: 0,
+            currentTime: 0,
+            keyframes: [], // { time, type, value }
+            isRecording: false,
+            mediaRecorder: null,
+            audioChunks: [],
+            audioContext: null,
+            waveformData: null
+        };
+
+        // Switch to animator scene
+        function switchToAnimator() {
+            document.querySelector('.main-content').style.display = 'none';
+            document.querySelector('.mobile-toggle').style.display = 'none';
+            document.getElementById('animatorScene').style.display = 'block';
+            
+            // Copy character to animator canvas
+            const srcCanvas = document.getElementById('mainCanvas');
+            const destCanvas = document.getElementById('animatorCanvas');
+            const destCtx = destCanvas.getContext('2d');
+            
+            // Set green screen background
+            destCtx.fillStyle = '#00ff00';
+            destCtx.fillRect(0, 0, destCanvas.width, destCanvas.height);
+            
+            // Draw character
+            destCtx.drawImage(srcCanvas, 0, 0);
+        }
+
+        // Switch back to creator scene
+        function switchToCreator() {
+            document.querySelector('.main-content').style.display = 'flex';
+            document.querySelector('.mobile-toggle').style.display = 'block';
+            document.getElementById('animatorScene').style.display = 'none';
+        }
+
+        // Set animation background color
+        function setAnimBg(type) {
+            animatorState.backgroundType = type;
+            const color = type === 'green' ? '#00ff00' : '#0000ff';
+            
+            // Update button states
+            document.querySelectorAll('.bg-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update canvas background
+            const canvas = document.getElementById('animatorCanvas');
+            const container = canvas.parentElement;
+            container.style.background = color;
+            
+            renderAnimatorFrame();
+        }
+
+        // Audio Recording
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    animatorState.mediaRecorder = new MediaRecorder(stream);
+                    animatorState.audioChunks = [];
+                    
+                    animatorState.mediaRecorder.ondataavailable = (event) => {
+                        animatorState.audioChunks.push(event.data);
+                    };
+                    
+                    animatorState.mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(animatorState.audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        audioPlayer.src = audioUrl;
+                        audioPlayer.style.display = 'block';
+                        
+                        // Process audio for waveform
+                        processAudioFile(audioBlob);
+                        
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    animatorState.mediaRecorder.start();
+                    animatorState.isRecording = true;
+                    
+                    document.getElementById('stopRecBtn').disabled = false;
+                    event.target.disabled = true;
+                })
+                .catch(err => {
+                    alert('Could not access microphone: ' + err.message);
+                });
+        }
+
+        function stopRecording() {
+            if (animatorState.mediaRecorder && animatorState.isRecording) {
+                animatorState.mediaRecorder.stop();
+                animatorState.isRecording = false;
+                document.getElementById('stopRecBtn').disabled = true;
+                document.querySelector('[onclick="startRecording()"]').disabled = false;
+            }
+        }
+
+        // Load audio file
+        function loadAudioFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = url;
+                audioPlayer.style.display = 'block';
+                
+                processAudioFile(file);
+            }
+        }
+
+        // Process audio file for waveform
+        function processAudioFile(audioBlob) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (!animatorState.audioContext) {
+                    animatorState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                animatorState.audioContext.decodeAudioData(e.target.result, (buffer) => {
+                    animatorState.audioBuffer = buffer;
+                    animatorState.audioDuration = buffer.duration;
+                    
+                    // Extract waveform data
+                    const rawData = buffer.getChannelData(0);
+                    const samples = 600; // Width of waveform canvas
+                    const blockSize = Math.floor(rawData.length / samples);
+                    const waveformData = [];
+                    
+                    for (let i = 0; i < samples; i++) {
+                        let sum = 0;
+                        for (let j = 0; j < blockSize; j++) {
+                            sum += Math.abs(rawData[(i * blockSize) + j]);
+                        }
+                        waveformData.push(sum / blockSize);
+                    }
+                    
+                    animatorState.waveformData = waveformData;
+                    drawWaveform();
+                    
+                    // Show timeline and animation controls
+                    document.getElementById('timelineSection').style.display = 'block';
+                    document.getElementById('animationSection').style.display = 'block';
+                    document.getElementById('exportSection').style.display = 'block';
+                    
+                    // Setup timeline
+                    const scrubber = document.getElementById('timelineScrubber');
+                    scrubber.max = animatorState.audioDuration;
+                    scrubber.value = 0;
+                    updateTimelineDisplay();
+                    
+                    // Setup audio player listener
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    audioPlayer.addEventListener('timeupdate', () => {
+                        animatorState.currentTime = audioPlayer.currentTime;
+                        scrubber.value = audioPlayer.currentTime;
+                        updateTimelineDisplay();
+                        renderAnimatorFrame();
+                    });
+                });
+            };
+            reader.readAsArrayBuffer(audioBlob);
+        }
+
+        // Draw waveform
+        function drawWaveform() {
+            const canvas = document.getElementById('waveform');
+            canvas.style.display = 'block';
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+            
+            if (!animatorState.waveformData) return;
+            
+            const data = animatorState.waveformData;
+            const barWidth = width / data.length;
+            
+            ctx.fillStyle = '#8b5cf6';
+            for (let i = 0; i < data.length; i++) {
+                const barHeight = data[i] * height * 0.8;
+                const x = i * barWidth;
+                const y = (height - barHeight) / 2;
+                ctx.fillRect(x, y, barWidth - 1, barHeight);
+            }
+        }
+
+        // Timeline scrubber
+        document.addEventListener('DOMContentLoaded', () => {
+            const scrubber = document.getElementById('timelineScrubber');
+            if (scrubber) {
+                scrubber.addEventListener('input', (e) => {
+                    animatorState.currentTime = parseFloat(e.target.value);
+                    updateTimelineDisplay();
+                    
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    if (audioPlayer && !audioPlayer.paused) {
+                        audioPlayer.pause();
+                    }
+                    if (audioPlayer) {
+                        audioPlayer.currentTime = animatorState.currentTime;
+                    }
+                    
+                    renderAnimatorFrame();
+                });
+            }
+        });
+
+        function updateTimelineDisplay() {
+            const timeDisplay = document.getElementById('timelineTime');
+            if (timeDisplay) {
+                timeDisplay.textContent = `${animatorState.currentTime.toFixed(2)}s / ${animatorState.audioDuration.toFixed(2)}s`;
+            }
+        }
+
+        // Set current mouth shape
+        let currentMouthOverride = null;
+        function setMouthShape() {
+            const select = document.getElementById('mouthSelect');
+            currentMouthOverride = select.value;
+            renderAnimatorFrame();
+        }
+
+        // Set current eye expression
+        let currentEyeOverride = null;
+        function setEyeExpression() {
+            const select = document.getElementById('eyesSelect');
+            currentEyeOverride = select.value === 'current' ? null : select.value;
+            renderAnimatorFrame();
+        }
+
+        // Add mouth keyframe
+        function addMouthKeyframe() {
+            const select = document.getElementById('mouthSelect');
+            const mouthShape = select.value;
+            
+            animatorState.keyframes.push({
+                time: animatorState.currentTime,
+                type: 'mouth',
+                value: mouthShape
+            });
+            
+            sortAndDisplayKeyframes();
+        }
+
+        // Add blink keyframe
+        function addBlinkKeyframe() {
+            animatorState.keyframes.push({
+                time: animatorState.currentTime,
+                type: 'blink',
+                value: 'Blink.png',
+                duration: 0.1 // Blink lasts 0.1 seconds
+            });
+            
+            sortAndDisplayKeyframes();
+        }
+
+        // Add eye expression keyframe
+        function addEyeKeyframe() {
+            const select = document.getElementById('eyesSelect');
+            if (select.value === 'current') return;
+            
+            animatorState.keyframes.push({
+                time: animatorState.currentTime,
+                type: 'eyes',
+                value: select.value
+            });
+            
+            sortAndDisplayKeyframes();
+        }
+
+        // Sort and display keyframes
+        function sortAndDisplayKeyframes() {
+            animatorState.keyframes.sort((a, b) => a.time - b.time);
+            
+            const display = document.getElementById('keyframesDisplay');
+            if (animatorState.keyframes.length === 0) {
+                display.innerHTML = 'No keyframes yet';
+                return;
+            }
+            
+            let html = '';
+            animatorState.keyframes.forEach((kf, index) => {
+                const icon = kf.type === 'mouth' ? '👄' : kf.type === 'blink' ? '👁️' : '😀';
+                const name = kf.value.replace('.png', '');
+                html += `
+                    <div class="keyframe-item">
+                        <span>${icon} ${kf.time.toFixed(2)}s - ${name}</span>
+                        <button class="keyframe-delete" onclick="deleteKeyframe(${index})">❌</button>
+                    </div>
+                `;
+            });
+            display.innerHTML = html;
+        }
+
+        // Delete keyframe
+        function deleteKeyframe(index) {
+            animatorState.keyframes.splice(index, 1);
+            sortAndDisplayKeyframes();
+        }
+
+        // Render animator frame
+        function renderAnimatorFrame() {
+            const canvas = document.getElementById('animatorCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set background color
+            const bgColor = animatorState.backgroundType === 'green' ? '#00ff00' : '#0000ff';
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Find active keyframes at current time
+            let activeMouth = null;
+            let activeEyes = null;
+            let shouldBlink = false;
+            
+            for (const kf of animatorState.keyframes) {
+                if (kf.type === 'blink' && 
+                    animatorState.currentTime >= kf.time && 
+                    animatorState.currentTime <= kf.time + (kf.duration || 0.1)) {
+                    shouldBlink = true;
+                } else if (kf.type === 'mouth' && kf.time <= animatorState.currentTime) {
+                    activeMouth = kf.value;
+                } else if (kf.type === 'eyes' && kf.time <= animatorState.currentTime) {
+                    activeEyes = kf.value;
+                }
+            }
+            
+            // Apply manual overrides
+            if (currentMouthOverride) activeMouth = currentMouthOverride;
+            if (currentEyeOverride) activeEyes = currentEyeOverride;
+            if (shouldBlink) activeEyes = 'Blink.png';
+            
+            // Draw layers
+            for (let i = layerOrder.length - 1; i >= 0; i--) {
+                const category = layerOrder[i];
+                
+                // Skip female-only categories if not in female mode
+                if (femaleOnlyCategories.includes(category) && !state.femaleMode) {
+                    continue;
+                }
+                
+                // Use active keyframe values if available
+                let index = state.currentIndices[category];
+                
+                if (category === 'MOUTH' && activeMouth) {
+                    const mouthIndex = imageData.MOUTH.findIndex(m => m === activeMouth);
+                    if (mouthIndex !== -1) index = mouthIndex;
+                }
+                
+                if (category === 'EYES' && activeEyes) {
+                    const eyeIndex = imageData.EYES.findIndex(e => e === activeEyes);
+                    if (eyeIndex !== -1) index = eyeIndex;
+                }
+                
+                const img = state.loadedImages[category][index];
+                
+                if (img && category !== 'BACKGROUNDS') { // Skip background layer
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                }
+            }
+        }
+
+        // Export video
+        async function exportVideo() {
+            const canvas = document.getElementById('animatorCanvas');
+            const audioPlayer = document.getElementById('audioPlayer');
+            
+            if (!animatorState.audioBuffer) {
+                alert('Please load audio first!');
+                return;
+            }
+            
+            // Show progress
+            const progressDiv = document.getElementById('exportProgress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            progressDiv.style.display = 'block';
+            progressText.textContent = 'Preparing export...';
+            
+            // Create MediaRecorder stream
+            const stream = canvas.captureStream(30); // 30 fps
+            
+            // Add audio track from audio element
+            if (audioPlayer.captureStream) {
+                const audioStream = audioPlayer.captureStream();
+                const audioTrack = audioStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    stream.addTrack(audioTrack);
+                }
+            }
+            
+            const chunks = [];
+            const recorder = new MediaRecorder(stream, {
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 2500000
+            });
+            
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+            
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `character-animation-${Date.now()}.webm`;
+                a.click();
+                
+                progressDiv.style.display = 'none';
+                alert('Video exported successfully!');
+            };
+            
+            // Start recording
+            recorder.start();
+            progressText.textContent = 'Recording video...';
+            
+            // Play through animation
+            audioPlayer.currentTime = 0;
+            animatorState.currentTime = 0;
+            audioPlayer.play();
+            
+            // Update progress
+            const updateProgress = setInterval(() => {
+                const progress = (animatorState.currentTime / animatorState.audioDuration) * 100;
+                progressFill.style.width = progress + '%';
+                progressText.textContent = `Recording: ${Math.round(progress)}%`;
+            }, 100);
+            
+            // Stop recording when audio ends
+            audioPlayer.onended = () => {
+                clearInterval(updateProgress);
+                recorder.stop();
+                stream.getTracks().forEach(track => track.stop());
+            };
+        }
     </script>
 </body>
 </html>
