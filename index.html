@@ -820,7 +820,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.2 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.3 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1689,6 +1689,22 @@
             sortAndDisplayKeyframes();
         }
 
+        // Calculate volume at a specific time for lip sync
+        function calculateVolumeAtTime(time) {
+            if (!animatorState.audioBuffer) return 0;
+            
+            const sampleRate = animatorState.audioBuffer.sampleRate;
+            const currentSample = Math.floor(time * sampleRate);
+            const windowSize = Math.floor(sampleRate * 0.02); // 20ms window
+            
+            const channelData = animatorState.audioBuffer.getChannelData(0);
+            let sum = 0;
+            for (let i = 0; i < windowSize && currentSample + i < channelData.length; i++) {
+                sum += Math.abs(channelData[currentSample + i]);
+            }
+            return sum / windowSize;
+        }
+
         // Render animator frame
         function renderAnimatorFrame() {
             const canvas = document.getElementById('animatorCanvas');
@@ -1721,21 +1737,30 @@
             let activeEyes = null;
             let shouldBlink = false;
             
+            // Check all keyframes - don't use else if so we can check all blinks
             for (const kf of animatorState.keyframes) {
-                if (kf.type === 'blink' && 
-                    animatorState.currentTime >= kf.time && 
-                    animatorState.currentTime <= kf.time + (kf.duration || 0.1)) {
-                    shouldBlink = true;
-                } else if (kf.type === 'mouth' && kf.time <= animatorState.currentTime) {
+                if (kf.type === 'blink') {
+                    // Check if current time is within blink duration with better precision
+                    const blinkStart = kf.time;
+                    const blinkEnd = kf.time + (kf.duration || 0.1);
+                    if (animatorState.currentTime >= blinkStart && animatorState.currentTime < blinkEnd) {
+                        shouldBlink = true;
+                    }
+                }
+                
+                if (kf.type === 'mouth' && kf.time <= animatorState.currentTime) {
                     activeMouth = kf.value;
-                } else if (kf.type === 'eyes' && kf.time <= animatorState.currentTime) {
+                }
+                
+                if (kf.type === 'eyes' && kf.time <= animatorState.currentTime) {
                     activeEyes = kf.value;
                 }
             }
             
             // Auto lip sync based on volume
             if (animatorState.autoLipSync && !activeMouth && !currentMouthOverride) {
-                const volume = animatorState.currentVolume;
+                // Calculate volume at current time (works during both playback and export)
+                const volume = calculateVolumeAtTime(animatorState.currentTime);
                 
                 // Get selected lip sync style
                 const lipSyncStyle = document.getElementById('lipSyncStyle')?.value || 'ehh';
@@ -1809,41 +1834,59 @@
             progressDiv.style.display = 'block';
             progressText.textContent = 'Preparing export...';
             
-            // Create MediaRecorder stream
-            const stream = canvas.captureStream(30); // 30 fps
+            // Reset to start
+            audioPlayer.currentTime = 0;
+            animatorState.currentTime = 0;
             
-            // Add audio track - works with both recorded and uploaded audio
-            if (audioPlayer.captureStream) {
-                try {
-                    const audioStream = audioPlayer.captureStream();
-                    const audioTrack = audioStream.getAudioTracks()[0];
-                    if (audioTrack) {
-                        stream.addTrack(audioTrack);
-                    }
-                } catch (err) {
-                    console.log('captureStream not supported, audio will still be captured during playback');
-                }
+            // Create video stream from canvas
+            const videoStream = canvas.captureStream(30); // 30 fps
+            
+            // Create audio context and destination for mixing
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const destination = audioContext.createMediaStreamDestination();
+            
+            // Connect audio buffer to destination
+            const source = audioContext.createBufferSource();
+            source.buffer = animatorState.audioBuffer;
+            source.connect(destination);
+            
+            // Combine video and audio streams
+            const combinedStream = new MediaStream();
+            
+            // Add video track
+            const videoTrack = videoStream.getVideoTracks()[0];
+            if (videoTrack) {
+                combinedStream.addTrack(videoTrack);
             }
             
-            // Try MP4 first, fallback to WebM if not supported
-            let mimeType = 'video/mp4';
-            let extension = 'mp4';
-            
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                // Try H.264 in MP4
-                mimeType = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    // Fallback to WebM with VP9
-                    mimeType = 'video/webm;codecs=vp9,opus';
-                    extension = 'webm';
-                    console.log('MP4 not supported, using WebM');
-                }
+            // Add audio track from our destination
+            const audioTrack = destination.stream.getAudioTracks()[0];
+            if (audioTrack) {
+                combinedStream.addTrack(audioTrack);
             }
+            
+            // Determine best supported codec
+            let mimeType = 'video/webm;codecs=vp9,opus';
+            let extension = 'webm';
+            
+            // Try to use MP4 if available (better compatibility)
+            if (MediaRecorder.isTypeSupported('video/mp4;codecs=h264,aac')) {
+                mimeType = 'video/mp4;codecs=h264,aac';
+                extension = 'mp4';
+            } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                mimeType = 'video/mp4';
+                extension = 'mp4';
+            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+                mimeType = 'video/webm;codecs=vp8,opus';
+            }
+            
+            console.log('Using codec:', mimeType);
             
             const chunks = [];
-            const recorder = new MediaRecorder(stream, {
+            const recorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 5000000 // 5 Mbps for good quality
+                videoBitsPerSecond: 5000000, // 5 Mbps
+                audioBitsPerSecond: 128000   // 128 kbps for audio
             });
             
             recorder.ondataavailable = (e) => {
@@ -1861,31 +1904,63 @@
                 a.download = `character-animation-${Date.now()}.${extension}`;
                 a.click();
                 
+                // Cleanup
+                combinedStream.getTracks().forEach(track => track.stop());
+                videoStream.getTracks().forEach(track => track.stop());
+                audioContext.close();
+                
                 progressDiv.style.display = 'none';
-                alert(`Video exported successfully as ${extension.toUpperCase()} with audio!`);
+                alert(`Video exported successfully as ${extension.toUpperCase()} with synchronized audio!`);
             };
             
             // Start recording
             recorder.start();
-            progressText.textContent = 'Recording video...';
+            progressText.textContent = 'Recording video with audio...';
             
-            // Play through animation
-            audioPlayer.currentTime = 0;
-            animatorState.currentTime = 0;
+            // Start audio playback (for sync)
             audioPlayer.play();
             
-            // Update progress
-            const updateProgress = setInterval(() => {
-                const progress = (animatorState.currentTime / animatorState.audioDuration) * 100;
+            // Also start audio buffer source (for recording)
+            source.start(0);
+            
+            // Animate through the timeline
+            const fps = 30;
+            const frameDuration = 1 / fps;
+            let frameCount = 0;
+            const totalFrames = Math.ceil(animatorState.audioDuration * fps);
+            
+            const animationInterval = setInterval(() => {
+                frameCount++;
+                animatorState.currentTime = frameCount * frameDuration;
+                
+                // Update progress
+                const progress = (frameCount / totalFrames) * 100;
                 progressFill.style.width = progress + '%';
                 progressText.textContent = `Recording: ${Math.round(progress)}%`;
-            }, 100);
+                
+                // Render current frame
+                renderAnimatorFrame();
+                
+                // Stop when we reach the end
+                if (animatorState.currentTime >= animatorState.audioDuration) {
+                    clearInterval(animationInterval);
+                    audioPlayer.pause();
+                    
+                    // Give it a moment to finish, then stop recording
+                    setTimeout(() => {
+                        recorder.stop();
+                    }, 500);
+                }
+            }, frameDuration * 1000);
             
-            // Stop recording when audio ends
+            // Fallback: stop recording if audio player ends
             audioPlayer.onended = () => {
-                clearInterval(updateProgress);
-                recorder.stop();
-                stream.getTracks().forEach(track => track.stop());
+                clearInterval(animationInterval);
+                setTimeout(() => {
+                    if (recorder.state === 'recording') {
+                        recorder.stop();
+                    }
+                }, 500);
             };
         }
     </script>
