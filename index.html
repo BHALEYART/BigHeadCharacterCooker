@@ -743,6 +743,10 @@
                     <!-- Timeline Section -->
                     <div class="control-section" id="timelineSection" style="display: none;">
                         <h3>⏱️ Timeline</h3>
+                        <div style="margin-bottom: 10px;">
+                            <button class="control-btn-sm" onclick="togglePlayPause()" id="playPauseBtn">▶️ Play</button>
+                            <button class="control-btn-sm" onclick="resetTimeline()">⏮️ Reset</button>
+                        </div>
                         <div class="timeline-container">
                             <canvas id="timeline" width="600" height="100"></canvas>
                             <input type="range" id="timelineScrubber" min="0" max="100" value="0" step="0.1" style="width: 100%;">
@@ -789,7 +793,7 @@
                             <label>Blinks & Eyes:</label>
                             <button class="control-btn-sm" onclick="addBlinkKeyframe()">👁️ Add Blink</button>
                             <select id="eyesSelect" onchange="setEyeExpression()">
-                                <option value="current">Keep Current Eyes</option>
+                                <option value="current">Export / Preview</option>
                                 <option value="Curious.png">Curious</option>
                                 <option value="Surprised.png">Surprised</option>
                                 <option value="Joy.png">Joy</option>
@@ -821,7 +825,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.5 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.6 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1526,20 +1530,30 @@
                     // Ensure audio player is properly configured
                     audioPlayer.muted = false;
                     audioPlayer.volume = 1.0;
+                    audioPlayer.load(); // Reload the audio to ensure it's ready
                     
-                    // Remove old event listeners to prevent duplicates
-                    const newAudioPlayer = audioPlayer.cloneNode(true);
-                    audioPlayer.parentNode.replaceChild(newAudioPlayer, audioPlayer);
+                    // Add timeupdate listener (remove old ones first)
+                    audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+                    audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
                     
-                    newAudioPlayer.addEventListener('timeupdate', () => {
-                        animatorState.currentTime = newAudioPlayer.currentTime;
-                        scrubber.value = newAudioPlayer.currentTime;
+                    // Add ended listener to reset play button
+                    audioPlayer.addEventListener('ended', () => {
+                        const playPauseBtn = document.getElementById('playPauseBtn');
+                        if (playPauseBtn) {
+                            playPauseBtn.textContent = '▶️ Play';
+                        }
+                    });
+                    
+                    function handleTimeUpdate() {
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        animatorState.currentTime = audioPlayer.currentTime;
+                        scrubber.value = audioPlayer.currentTime;
                         updateTimelineDisplay();
                         
                         // Calculate current volume for auto lip sync
                         if (animatorState.autoLipSync && animatorState.audioBuffer) {
                             const sampleRate = animatorState.audioBuffer.sampleRate;
-                            const currentSample = Math.floor(newAudioPlayer.currentTime * sampleRate);
+                            const currentSample = Math.floor(audioPlayer.currentTime * sampleRate);
                             const windowSize = Math.floor(sampleRate * 0.02); // 20ms window (reduced from 50ms for more sensitivity)
                             
                             const channelData = animatorState.audioBuffer.getChannelData(0);
@@ -1551,7 +1565,7 @@
                         }
                         
                         renderAnimatorFrame();
-                    });
+                    }
                 });
             };
             reader.readAsArrayBuffer(audioBlob);
@@ -1608,6 +1622,51 @@
             if (timeDisplay) {
                 timeDisplay.textContent = `${animatorState.currentTime.toFixed(2)}s / ${animatorState.audioDuration.toFixed(2)}s`;
             }
+        }
+
+        // Play/Pause toggle
+        function togglePlayPause() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            
+            if (!audioPlayer || !audioPlayer.src) {
+                alert('Please load audio first!');
+                return;
+            }
+            
+            if (audioPlayer.paused) {
+                audioPlayer.play()
+                    .then(() => {
+                        console.log('Audio playing successfully');
+                        playPauseBtn.textContent = '⏸️ Pause';
+                    })
+                    .catch(err => {
+                        console.error('Error playing audio:', err);
+                        alert('Could not play audio. Make sure your audio file is loaded correctly.');
+                    });
+            } else {
+                audioPlayer.pause();
+                playPauseBtn.textContent = '▶️ Play';
+            }
+        }
+
+        // Reset timeline
+        function resetTimeline() {
+            const audioPlayer = document.getElementById('audioPlayer');
+            const scrubber = document.getElementById('timelineScrubber');
+            
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            animatorState.currentTime = 0;
+            scrubber.value = 0;
+            
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            if (playPauseBtn) {
+                playPauseBtn.textContent = '▶️ Play';
+            }
+            
+            updateTimelineDisplay();
+            renderAnimatorFrame();
         }
 
         // Toggle auto lip sync
