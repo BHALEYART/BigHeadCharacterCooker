@@ -820,7 +820,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.3 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.4 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1398,6 +1398,9 @@
 
         // Audio Recording
         function startRecording() {
+            const startBtn = document.querySelector('[onclick="startRecording()"]');
+            const stopBtn = document.getElementById('stopRecBtn');
+            
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     animatorState.mediaRecorder = new MediaRecorder(stream);
@@ -1423,8 +1426,8 @@
                     animatorState.mediaRecorder.start();
                     animatorState.isRecording = true;
                     
-                    document.getElementById('stopRecBtn').disabled = false;
-                    event.target.disabled = true;
+                    if (stopBtn) stopBtn.disabled = false;
+                    if (startBtn) startBtn.disabled = true;
                 })
                 .catch(err => {
                     alert('Could not access microphone: ' + err.message);
