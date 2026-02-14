@@ -761,6 +761,13 @@
                             <div style="color: #a5b4fc; font-size: 13px; margin-top: 5px; font-style: italic;">
                                 Mouth automatically opens/closes with audio. Uncheck for manual control.
                             </div>
+                            <div style="margin-top: 10px;">
+                                <label style="color: #c4b5fd; font-size: 14px;">Lip Sync Style:</label>
+                                <select id="lipSyncStyle" style="margin-left: 10px; padding: 5px; background: #374151; color: #e0e7ff; border: 1px solid #8b5cf6; border-radius: 5px; cursor: pointer;">
+                                    <option value="ehh">Ehh (Default)</option>
+                                    <option value="ooo">Ooo (Alternative)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="control-group" id="manualMouthControls" style="display: none;">
@@ -813,7 +820,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.1 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.2 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1498,7 +1505,7 @@
                         if (animatorState.autoLipSync && animatorState.audioBuffer) {
                             const sampleRate = animatorState.audioBuffer.sampleRate;
                             const currentSample = Math.floor(audioPlayer.currentTime * sampleRate);
-                            const windowSize = Math.floor(sampleRate * 0.05); // 50ms window
+                            const windowSize = Math.floor(sampleRate * 0.02); // 20ms window (reduced from 50ms for more sensitivity)
                             
                             const channelData = animatorState.audioBuffer.getChannelData(0);
                             let sum = 0;
@@ -1625,6 +1632,24 @@
             const select = document.getElementById('eyesSelect');
             if (select.value === 'current') return;
             
+            // Automatically add a blink keyframe 0.1 seconds before the eye change
+            const blinkTime = Math.max(0, animatorState.currentTime - 0.1);
+            
+            // Check if there's already a blink at this time to avoid duplicates
+            const hasBlinkAtTime = animatorState.keyframes.some(kf => 
+                kf.type === 'blink' && Math.abs(kf.time - blinkTime) < 0.05
+            );
+            
+            if (!hasBlinkAtTime) {
+                animatorState.keyframes.push({
+                    time: blinkTime,
+                    type: 'blink',
+                    value: 'Blink.png',
+                    duration: 0.1
+                });
+            }
+            
+            // Add the eye change keyframe
             animatorState.keyframes.push({
                 time: animatorState.currentTime,
                 type: 'eyes',
@@ -1712,13 +1737,17 @@
             if (animatorState.autoLipSync && !activeMouth && !currentMouthOverride) {
                 const volume = animatorState.currentVolume;
                 
+                // Get selected lip sync style
+                const lipSyncStyle = document.getElementById('lipSyncStyle')?.value || 'ehh';
+                const mediumMouth = lipSyncStyle === 'ooo' ? 'Ooo.png' : 'Ehh.png';
+                
                 // Map volume to mouth shapes
-                // Threshold tuning: adjust these values for sensitivity
-                if (volume > 0.15) {
+                // Adjusted thresholds for more sensitivity and frequent changes
+                if (volume > 0.12) {
                     activeMouth = 'Ahh.png'; // Wide open for loud sounds
-                } else if (volume > 0.08) {
-                    activeMouth = 'Ooo.png'; // Medium open
-                } else if (volume > 0.03) {
+                } else if (volume > 0.05) {
+                    activeMouth = mediumMouth; // Medium open (Ehh or Ooo based on style)
+                } else if (volume > 0.02) {
                     activeMouth = 'Eee.png'; // Slight open
                 } else {
                     activeMouth = 'Mmm.png'; // Closed for silence
