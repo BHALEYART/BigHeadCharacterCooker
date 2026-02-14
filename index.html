@@ -825,7 +825,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.6 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.7 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1936,16 +1936,38 @@
                 return;
             }
             
+            // Automatically set Export / Preview mode for eyes
+            const eyesSelect = document.getElementById('eyesSelect');
+            if (eyesSelect) {
+                eyesSelect.value = 'current'; // Set to "Export / Preview"
+                currentEyeOverride = null; // Clear any eye override
+            }
+            
+            // Reset timeline to 0:00
+            const scrubber = document.getElementById('timelineScrubber');
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            animatorState.currentTime = 0;
+            if (scrubber) {
+                scrubber.value = 0;
+            }
+            updateTimelineDisplay();
+            
+            // Update play/pause button
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            if (playPauseBtn) {
+                playPauseBtn.textContent = '▶️ Play';
+            }
+            
+            // Render the initial frame before export
+            renderAnimatorFrame();
+            
             // Show progress
             const progressDiv = document.getElementById('exportProgress');
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             progressDiv.style.display = 'block';
             progressText.textContent = 'Preparing export...';
-            
-            // Reset to start
-            audioPlayer.currentTime = 0;
-            animatorState.currentTime = 0;
             
             // Create video stream from canvas
             const videoStream = canvas.captureStream(30); // 30 fps
