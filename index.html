@@ -711,6 +711,7 @@
                     </div>
                     <div class="background-selector">
                         <label>Background:</label>
+                        <button class="bg-btn" onclick="setAnimBg('character')" data-bg="character">🎨 Character BG</button>
                         <button class="bg-btn active" onclick="setAnimBg('green')" data-bg="green">🟢 Green</button>
                         <button class="bg-btn" onclick="setAnimBg('blue')" data-bg="blue">🔵 Blue</button>
                         <button class="bg-btn" onclick="setAnimBg('black')" data-bg="black">⚫ Black</button>
@@ -792,8 +793,8 @@
                                 <option value="Curious.png">Curious</option>
                                 <option value="Surprised.png">Surprised</option>
                                 <option value="Joy.png">Joy</option>
-                                <option value="Grumpy.png">Grumpy</option>
-                                <option value="Annoyed.png">Annoyed</option>
+                                <option value="Infuriated.png">Infuriated</option>
+                                <option value="Ouchy.png">Ouchy</option>
                                 <option value="Stern.png">Stern</option>
                             </select>
                             <button class="control-btn-sm" onclick="addEyeKeyframe()">➕ Add Expression</button>
@@ -820,7 +821,7 @@
             </div>
         </div>
         
-        <div class="footer-credit">V2.4 Created By BHaleyArt</div>
+        <div class="footer-credit">V2.5 Created By BHaleyArt</div>
     </div>
 
     <script>
@@ -1366,6 +1367,9 @@
             let color;
             
             switch(type) {
+                case 'character':
+                    color = null; // Will use the character's background image
+                    break;
                 case 'green':
                     color = '#00ff00';
                     break;
@@ -1391,7 +1395,12 @@
             // Update canvas background
             const canvas = document.getElementById('animatorCanvas');
             const container = canvas.parentElement;
-            container.style.background = color;
+            
+            if (color) {
+                container.style.background = color;
+            } else {
+                container.style.background = '#1e293b'; // Default container color for character bg
+            }
             
             renderAnimatorFrame();
         }
@@ -1416,6 +1425,13 @@
                         const audioPlayer = document.getElementById('audioPlayer');
                         audioPlayer.src = audioUrl;
                         audioPlayer.style.display = 'block';
+                        audioPlayer.volume = 1.0;
+                        audioPlayer.muted = false;
+                        
+                        // Ensure audio is loaded
+                        audioPlayer.addEventListener('loadedmetadata', () => {
+                            console.log('Recorded audio loaded, duration:', audioPlayer.duration);
+                        }, { once: true });
                         
                         // Process audio for waveform
                         processAudioFile(audioBlob);
@@ -1451,6 +1467,13 @@
                 const audioPlayer = document.getElementById('audioPlayer');
                 audioPlayer.src = url;
                 audioPlayer.style.display = 'block';
+                audioPlayer.volume = 1.0;
+                audioPlayer.muted = false;
+                
+                // Ensure audio is loaded before processing
+                audioPlayer.addEventListener('loadedmetadata', () => {
+                    console.log('Audio loaded, duration:', audioPlayer.duration);
+                }, { once: true });
                 
                 processAudioFile(file);
             }
@@ -1499,15 +1522,24 @@
                     
                     // Setup audio player listener for auto lip sync
                     const audioPlayer = document.getElementById('audioPlayer');
-                    audioPlayer.addEventListener('timeupdate', () => {
-                        animatorState.currentTime = audioPlayer.currentTime;
-                        scrubber.value = audioPlayer.currentTime;
+                    
+                    // Ensure audio player is properly configured
+                    audioPlayer.muted = false;
+                    audioPlayer.volume = 1.0;
+                    
+                    // Remove old event listeners to prevent duplicates
+                    const newAudioPlayer = audioPlayer.cloneNode(true);
+                    audioPlayer.parentNode.replaceChild(newAudioPlayer, audioPlayer);
+                    
+                    newAudioPlayer.addEventListener('timeupdate', () => {
+                        animatorState.currentTime = newAudioPlayer.currentTime;
+                        scrubber.value = newAudioPlayer.currentTime;
                         updateTimelineDisplay();
                         
                         // Calculate current volume for auto lip sync
                         if (animatorState.autoLipSync && animatorState.audioBuffer) {
                             const sampleRate = animatorState.audioBuffer.sampleRate;
-                            const currentSample = Math.floor(audioPlayer.currentTime * sampleRate);
+                            const currentSample = Math.floor(newAudioPlayer.currentTime * sampleRate);
                             const windowSize = Math.floor(sampleRate * 0.02); // 20ms window (reduced from 50ms for more sensitivity)
                             
                             const channelData = animatorState.audioBuffer.getChannelData(0);
@@ -1713,27 +1745,42 @@
             const canvas = document.getElementById('animatorCanvas');
             const ctx = canvas.getContext('2d');
             
-            // Set background color
-            let bgColor;
-            switch(animatorState.backgroundType) {
-                case 'green':
-                    bgColor = '#00ff00';
-                    break;
-                case 'blue':
-                    bgColor = '#0000ff';
-                    break;
-                case 'black':
-                    bgColor = '#000000';
-                    break;
-                case 'white':
-                    bgColor = '#ffffff';
-                    break;
-                default:
-                    bgColor = '#00ff00';
+            // Set background color or image
+            if (animatorState.backgroundType === 'character') {
+                // Draw the character's selected background image
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const bgIndex = state.currentIndices['BACKGROUNDS'];
+                const bgImg = state.loadedImages['BACKGROUNDS'][bgIndex];
+                if (bgImg) {
+                    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                } else {
+                    // Fallback to dark background if no image
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            } else {
+                // Use solid color background
+                let bgColor;
+                switch(animatorState.backgroundType) {
+                    case 'green':
+                        bgColor = '#00ff00';
+                        break;
+                    case 'blue':
+                        bgColor = '#0000ff';
+                        break;
+                    case 'black':
+                        bgColor = '#000000';
+                        break;
+                    case 'white':
+                        bgColor = '#ffffff';
+                        break;
+                    default:
+                        bgColor = '#00ff00';
+                }
+                
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
-            
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Find active keyframes at current time
             let activeMouth = null;
